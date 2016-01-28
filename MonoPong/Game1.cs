@@ -49,6 +49,11 @@ namespace MonoPong
             this._id = id;
             this._keydict = keyDict;
         }
+
+        public void Draw(SpriteBatch spriteBatch)
+        {
+            spriteBatch.Draw(_tex,_pos,Color.White);
+        }
     }
     /// <summary>
     /// This is the main type for your game.
@@ -65,6 +70,7 @@ namespace MonoPong
         public Game1()
         {
             graphics = new GraphicsDeviceManager(this);
+            
             Content.RootDirectory = "Content";
         }
 
@@ -90,15 +96,15 @@ namespace MonoPong
             // Create a new SpriteBatch, which can be used to draw textures.
             spriteBatch = new SpriteBatch(GraphicsDevice);
 
-            Dictionary<Keys, Command> p1dict = new Dictionary<Keys, Command>();
+            Dictionary<Keys, Command> p1dict = new Dictionary<Keys, Command>();            
+            player1 = new Player(Content.Load<Texture2D>(@"png/bar"), new Vector2(0, 0), 1,p1dict);
             p1dict.Add(Keys.W, new MoveUpCommand(player1));
             p1dict.Add(Keys.S, new MoveDownCommand(player1));
-            player1 = new Player(Content.Load<Texture2D>("bar.png"), new Vector2(0, 0), 1,p1dict);
 
-            Dictionary<Keys, Command> p2dict = new Dictionary<Keys, Command>();
+            Dictionary<Keys, Command> p2dict = new Dictionary<Keys, Command>();        
+            player2 = new Player(Content.Load<Texture2D>(@"png/bar"), new Vector2(graphics.PreferredBackBufferWidth-50, 0), 2, p2dict);
             p2dict.Add(Keys.Up, new MoveUpCommand(player2));
             p2dict.Add(Keys.Down, new MoveDownCommand(player2));
-            player2 = new Player(Content.Load<Texture2D>("bar.png"), new Vector2(0, 0), 2, p2dict);
             // TODO: use this.Content to load your game content here
         }
 
@@ -147,10 +153,14 @@ namespace MonoPong
         /// <param name="gameTime">Provides a snapshot of timing values.</param>
         protected override void Draw(GameTime gameTime)
         {
-            GraphicsDevice.Clear(Color.CornflowerBlue);
+            GraphicsDevice.Clear(Color.White);
 
-            // TODO: Add your drawing code here
+            spriteBatch.Begin();
 
+            player1.Draw(spriteBatch);
+            player2.Draw(spriteBatch);
+  
+            spriteBatch.End();
             base.Draw(gameTime);
         }
 
