@@ -1,4 +1,5 @@
-﻿using Microsoft.Xna.Framework;
+﻿using System;
+using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using System.Collections.Generic;
@@ -6,7 +7,61 @@ using System.Collections.Generic;
 
 namespace MonoPong
 {
+    internal class Ball
+    {
+        private Texture2D _texture;
+        private Vector2 _position;
+        private Vector2 _velocity;
 
+        public Ball(Texture2D texture, Vector2 position, Vector2 velocity)
+        {
+            this._texture = texture;
+            this._position = position;
+            this._velocity = velocity;
+        }
+
+        public Rectangle BoundingBox
+        {
+            get
+            {
+                return new Rectangle(
+                    (int)Position.X,
+                    (int)Position.Y,
+                    _texture.Width,
+                    _texture.Height);
+            }
+        }
+
+        public Texture2D Texture
+        {
+            get
+            {
+                return _texture;
+            }
+
+            set
+            {
+                _texture = value;
+            }
+        }
+
+        public Vector2 Position
+        {
+            get { return _position; }
+            set { _position = value; }
+        }
+
+        public Vector2 Velocity
+        {
+            get { return _velocity; }
+            set { _velocity = value; }
+        }
+
+        public void Draw(SpriteBatch spriteBatch)
+        {
+            spriteBatch.Draw(_texture,_position,Color.White);
+        }
+    }
 
     internal class Player
     {
@@ -20,6 +75,18 @@ namespace MonoPong
         public Dictionary<Keys,Command> getKeyDict()
         {
             return _keydict;
+        }
+
+        public Rectangle BoundingBox
+        {
+            get
+            {
+                return new Rectangle(
+                    (int)_pos.X,
+                    (int)_pos.Y,
+                    _tex.Width,
+                    _tex.Height);
+            }
         }
 
         public Texture2D getTexture()
@@ -65,6 +132,7 @@ namespace MonoPong
 
         Texture2D t_player;
         Player player1, player2;
+        Ball ball;
         private KeyboardState keyState;
 
         public Game1()
@@ -105,7 +173,8 @@ namespace MonoPong
             player2 = new Player(Content.Load<Texture2D>(@"png/bar"), new Vector2(graphics.PreferredBackBufferWidth-50, 0), 2, p2dict);
             p2dict.Add(Keys.Up, new MoveUpCommand(player2));
             p2dict.Add(Keys.Down, new MoveDownCommand(player2));
-            // TODO: use this.Content to load your game content here
+           
+            ball = new Ball(Content.Load<Texture2D>(@"png/ball"),new Vector2(100,100),new Vector2(2,0));
         }
 
         /// <summary>
@@ -128,6 +197,8 @@ namespace MonoPong
                 Exit();
             keyState = Keyboard.GetState();
 
+            ball.Position += ball.Velocity;
+
             foreach (KeyValuePair<Keys, Command> pair in player1.getKeyDict())
             {
                 if(keyState.IsKeyDown(pair.Key))
@@ -144,7 +215,30 @@ namespace MonoPong
                 }
             }
 
+            CheckBallCollision();
+
             base.Update(gameTime);
+        }
+
+        private void CheckBallCollision()
+        {
+            if (ball.BoundingBox.Intersects(player1.BoundingBox))
+            {
+                int relIntersY = (int) ((player1.getPosition().Y + 75) - (ball.Position.Y + 10));
+                float normalizedInters = relIntersY/75;
+                float bounceangle = (normalizedInters*((5*MathHelper.Pi)/12)); // 75 Grad
+                ball.Velocity = new Vector2((float) (2*Math.Cos(bounceangle)),(float) (-2*Math.Sin(bounceangle)));
+                ball.Position += ball.Velocity;
+            }
+
+            if (ball.BoundingBox.Intersects(player2.BoundingBox))
+            {
+                int relIntersY = (int)((player2.getPosition().Y + 75) - (ball.Position.Y + 10));
+                float normalizedInters = relIntersY / 75;
+                float bounceangle = (normalizedInters * ((5 * MathHelper.Pi) / 12)); // 75 Grad
+                ball.Velocity = new Vector2((float)(2 * Math.Cos(bounceangle)), (float)(-2 * Math.Sin(bounceangle)));
+                ball.Position += ball.Velocity;
+            }
         }
 
         /// <summary>
@@ -159,6 +253,7 @@ namespace MonoPong
 
             player1.Draw(spriteBatch);
             player2.Draw(spriteBatch);
+            ball.Draw(spriteBatch);
   
             spriteBatch.End();
             base.Draw(gameTime);
