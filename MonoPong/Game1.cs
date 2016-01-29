@@ -28,7 +28,7 @@ namespace MonoPong
         private KeyboardState keyState;
         public static readonly Rectangle boundingBoxBottom = new Rectangle(0, HEIGHT-5, WIDTH, 5);
         public static readonly Rectangle boundingBoxLeft = new Rectangle(0, 0, 3, HEIGHT);
-        public static readonly Rectangle boundingBoxRight = new Rectangle(0, WIDTH-3, 3, HEIGHT);
+        public static readonly Rectangle boundingBoxRight = new Rectangle(WIDTH - 3, 0, 3, HEIGHT);
         public static readonly Rectangle boundingBoxTop = new Rectangle(0,0,WIDTH,5);
 
         public Game1()
@@ -135,7 +135,7 @@ namespace MonoPong
                 ball.setToStartPosition();
                 ball.Velocity = new Vector2(-1,0);
             }
-            if (ball.BoundingBox.Intersects(boundingBoxLeft))
+            if (ball.BoundingBox.Intersects(boundingBoxRight))
             {
                 player2.Score++;
                 ball.setToStartPosition();
@@ -179,7 +179,7 @@ namespace MonoPong
         {
             GraphicsDevice.Clear(Color.White);
 
-            this.Window.Title = ball.Velocity.ToString();
+            this.Window.Title = "Score: " + player1.Score + ":" + player2.Score;
 
             spriteBatch.Begin();
 
