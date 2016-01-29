@@ -13,7 +13,12 @@ namespace MonoPong
 
         public override void execute()
         {
-            _actor.setPosition(new Vector2(_actor.getPosition().X, _actor.getPosition().Y - 1));
+            Vector2 newpos = new Vector2(_actor.Position.X, _actor.Position.Y - _actor.Speed);
+
+            if (!Game1.boundingBoxTop.Intersects(_actor.BoundingBox))
+            {
+                _actor.Position = newpos;
+            }
         }
     }
 }
