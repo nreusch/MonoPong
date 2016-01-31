@@ -12,7 +12,8 @@ namespace MonoPong
         private Texture2D _texture;
         private Vector2 _position;
         private Vector2 _velocity;
-        private float _speed = 7f;
+        private float _speed;
+        private float _startspeed = 100f;
 
         /// <summary>
         /// 
@@ -20,11 +21,12 @@ namespace MonoPong
         /// <param name="texture"></param>
         /// <param name="position"></param>
         /// <param name="velocity">Has to be normalized(components betweeg 0-1)</param>
-        public Ball(Texture2D texture, Vector2 position, Vector2 velocity)
+        public Ball(Texture2D texture, Vector2 position, float startspeed)
         {
             this._texture = texture;
             this._position = position;
-            this._velocity = velocity;
+            this._startspeed = startspeed;
+
         }
 
         public Rectangle BoundingBox
@@ -82,9 +84,18 @@ namespace MonoPong
             spriteBatch.Draw(_texture, _position, Color.White);
         }
 
-        public void setToStartPosition()
+        public void setToStartPosition(Player scorer)
         {
-            this.Position = new Vector2(Game1.WIDTH/2-BoundingBox.Width/2,Game1.HEIGHT/2-BoundingBox.Height/2);
+            this.Speed = this._startspeed;
+            //this.Position = new Vector2(Game1.WIDTH/2-BoundingBox.Width/2,Game1.HEIGHT/2-BoundingBox.Height/2);
+            if(scorer.Id == 1)
+            {
+                this.Velocity = new Vector2(-1*Speed, 0);
+            }
+            else
+            {
+                this.Velocity = new Vector2(Speed, 0);
+            }
         }
     }
 }

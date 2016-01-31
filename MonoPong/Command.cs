@@ -5,7 +5,7 @@ using System.Text;
 
 namespace MonoPong
 {
-    abstract class Command
+    public abstract class Command
     {
         protected Player _actor;
         public Command(Player actor) { _actor = actor; }

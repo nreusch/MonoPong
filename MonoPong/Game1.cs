@@ -32,7 +32,7 @@ namespace MonoPong
         public static readonly Rectangle boundingBoxRight = new Rectangle(WIDTH - 3, 0, 3, HEIGHT);
         public static readonly Rectangle boundingBoxTop = new Rectangle(0,45,WIDTH,5);
         private readonly bool WAITFORENTER;
-        private bool _waitingforenter;
+        private bool _waitingforenter = true;
         private bool _pressspacepositonset;
         private SpriteFont font_big;
         private Vector2 _pressspacepositon;
@@ -80,17 +80,19 @@ namespace MonoPong
             Dictionary<Keys, Command> p1Dict = new Dictionary<Keys, Command>();            
             player1 = new Player(Content.Load<Texture2D>(@"png/bar"), new Vector2(0, 0), 1,p1Dict);
             player1.Position = new Vector2(boundingBoxLeft.Width, boundingBoxTop.Y + boundingBoxTop.Height);
+            //player1.Position = new Vector2(boundingBoxLeft.Width, boundingBoxTop.Y + boundingBoxTop.Height + HEIGHT / 2 - player1.BoundingBox.Height);
             p1Dict.Add(Keys.W, new MoveUpCommand(player1));
             p1Dict.Add(Keys.S, new MoveDownCommand(player1));
 
             Dictionary<Keys, Command> p2Dict = new Dictionary<Keys, Command>();        
             player2 = new Player(Content.Load<Texture2D>(@"png/bar"), new Vector2(0, 0), 2, p2Dict);
-            player2.Position = new Vector2(WIDTH-boundingBoxRight.Width-player2.BoundingBox.Width, boundingBoxTop.Y + boundingBoxTop.Height);
+            player2.Position = new Vector2(WIDTH - boundingBoxRight.Width - player2.BoundingBox.Width, boundingBoxTop.Y + boundingBoxTop.Height);
+            // player2.Position = new Vector2(WIDTH-boundingBoxRight.Width-player2.BoundingBox.Width, boundingBoxTop.Y + boundingBoxTop.Height + HEIGHT/2 - player2.BoundingBox.Height );
             p2Dict.Add(Keys.Up, new MoveUpCommand(player2));
             p2Dict.Add(Keys.Down, new MoveDownCommand(player2));
            
-            ball = new Ball(Content.Load<Texture2D>(@"png/ball"),new Vector2(300,100),new Vector2(1,0));
-            ball.setToStartPosition();
+            ball = new Ball(Content.Load<Texture2D>(@"png/ball"),new Vector2(300, boundingBoxTop.Y + boundingBoxTop.Height + player1.BoundingBox.Height/2 - 10),300f);
+            ball.setToStartPosition(player1);
         }
 
         /// <summary>
@@ -114,7 +116,15 @@ namespace MonoPong
 
             if (!_waitingforenter)
             {
-                ball.Position += ball.Velocity*ball.Speed;
+                
+                ball.Position += ball.Velocity* (float)gameTime.ElapsedGameTime.TotalSeconds;
+
+                // TODO: Change, dirty fix for having the ball jump over the player and goal bounding box
+                if (ball.Position.X < boundingBoxLeft.X) ball.Position = new Vector2(boundingBoxLeft.X + boundingBoxLeft.Width - 1 + player1.BoundingBox.Width, ball.Position.Y);
+                else if (ball.Position.X > boundingBoxRight.X + boundingBoxRight.Width) ball.Position = new Vector2(boundingBoxRight.X - ball.BoundingBox.Width + 1 - player1.BoundingBox.Width, ball.Position.Y);
+
+                if (ball.Position.Y < boundingBoxTop.Y) ball.Position = new Vector2(ball.Position.X, boundingBoxTop.Y + boundingBoxTop.Height-1);
+                else if (ball.Position.Y > boundingBoxBottom.Y + boundingBoxBottom.Height) ball.Position = new Vector2(ball.Position.X, boundingBoxBottom.Y - ball.BoundingBox.Height + 1);
 
                 foreach (KeyValuePair<Keys, Command> pair in player1.getKeyDict())
                 {
@@ -149,29 +159,38 @@ namespace MonoPong
         {
             if (ball.BoundingBox.Intersects(boundingBoxLeft))
             {
-                goalShotBy(player2);
-                
+                if (ball.BoundingBox.Intersects(player1.BoundingBox)) // TODO: Change, dirty fix for having the ball jump over the player and goal bounding box
+                {
+                    hitPaddleFrom(player1);
+                }
+                else
+                {
+                    goalShotBy(player1);
+                }
             }
             if (ball.BoundingBox.Intersects(boundingBoxRight))
             {
-                goalShotBy((player1));
+                if (ball.BoundingBox.Intersects(player2.BoundingBox)) // TODO: Change, dirty fix for having the ball jump over the player and goal bounding box
+                {
+                    hitPaddleFrom(player2);
+                }
+                else
+                {
+                    goalShotBy(player2);
+                }
             }
 
             if (ball.BoundingBox.Intersects(player1.BoundingBox))
             {
-                float relIntersY = (int) ((player1.Position.Y + player1.BoundingBox.Height/2) - (ball.Position.Y + ball.BoundingBox.Height/2));
-                float normalizedInters = relIntersY/ player1.BoundingBox.Height / 2;
-                float bounceangle = (normalizedInters*((5*MathHelper.Pi)/12)); // 75 Grad
-                ball.Velocity = new Vector2((float) (1*Math.Cos(bounceangle)),(float) (-1 * Math.Sin(bounceangle)));
+                hitPaddleFrom(player1);
+
             }
             if (ball.BoundingBox.Intersects(player2.BoundingBox))
             {
 
-                float relIntersY = (int)((player2.Position.Y + player2.BoundingBox.Height / 2) - (ball.Position.Y + ball.BoundingBox.Height / 2));
-                float normalizedInters = relIntersY / player1.BoundingBox.Height / 2;
-                float bounceangle = (normalizedInters * ((5 * MathHelper.Pi) / 12)); // 75 Grad
-                ball.Velocity = new Vector2((float)(-1 * Math.Cos(bounceangle)), (float)(-1 * Math.Sin(bounceangle)));
-                
+                hitPaddleFrom(player2);
+
+
             }
 
             if(ball.BoundingBox.Intersects(boundingBoxTop) || ball.BoundingBox.Intersects(boundingBoxBottom))
@@ -184,24 +203,36 @@ namespace MonoPong
 
         }
 
-        private void goalShotBy(Player player)
+        private void hitPaddleFrom(Player player)
         {
-            player.Score++;           
-            ball.setToStartPosition();
+            float relIntersY = (int)((player.Position.Y + player.BoundingBox.Height / 2) - (ball.Position.Y + ball.BoundingBox.Height / 2));
+            float normalizedInters = relIntersY / player.BoundingBox.Height / 2;
+            float bounceangle = (normalizedInters * ((5 * MathHelper.Pi) / 12)); // 75 Grad
+            ball.Speed *= 1.2f; // Increase Ball Speed by 20 % TODO: Maybe not exponential growth
+
+            if (player.Id == 1)
+            {
+                ball.Velocity = new Vector2((float) (ball.Speed*Math.Cos(bounceangle)),
+                    (float) (-ball.Speed*Math.Sin(bounceangle)));
+            }
+            else
+            {
+                ball.Velocity = new Vector2((float)(-ball.Speed * Math.Cos(bounceangle)), (float)(-ball.Speed * Math.Sin(bounceangle)));
+            }
+            
+        }
+
+        private void goalShotBy(Player scorer)
+        {
+            scorer.Score++;           
+            ball.setToStartPosition(scorer);
 
             if (!this.WAITFORENTER == true)
             {
                 _waitingforenter = true;
             }
             
-                if (player.Id == 1)
-                {
-                    ball.Velocity = new Vector2(-1, 0);
-                }
-                else
-                {
-                    ball.Velocity = new Vector2(1, 0);
-                }
+                
 
             
             

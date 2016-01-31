@@ -8,12 +8,12 @@ using Microsoft.Xna.Framework.Input;
 
 namespace MonoPong
 {
-    internal class Player
+    public class Player
     {
         private Texture2D _tex;
         private Vector2 _position;
         private byte _id;
-        private float _speed = 3f;
+        private float _speed = 5f;
         // Dict Keys -> Command
         private Dictionary<Keys, Command> _keydict;
         private int _score = 0;
