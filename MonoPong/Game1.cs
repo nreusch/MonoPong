@@ -20,6 +20,7 @@ namespace MonoPong
 
         GraphicsDeviceManager graphics;
         SpriteBatch spriteBatch;
+        private SpriteFont font;
 
         Texture2D t_player,t_wall,t_goal;
         Player player1, player2;
@@ -29,7 +30,12 @@ namespace MonoPong
         public static readonly Rectangle boundingBoxBottom = new Rectangle(0, HEIGHT-5, WIDTH, 5);
         public static readonly Rectangle boundingBoxLeft = new Rectangle(0, 0, 3, HEIGHT);
         public static readonly Rectangle boundingBoxRight = new Rectangle(WIDTH - 3, 0, 3, HEIGHT);
-        public static readonly Rectangle boundingBoxTop = new Rectangle(0,0,WIDTH,5);
+        public static readonly Rectangle boundingBoxTop = new Rectangle(0,45,WIDTH,5);
+        private readonly bool WAITFORENTER;
+        private bool _waitingforenter;
+        private bool _pressspacepositonset;
+        private SpriteFont font_big;
+        private Vector2 _pressspacepositon;
 
         public Game1()
         {
@@ -62,6 +68,9 @@ namespace MonoPong
             // Create a new SpriteBatch, which can be used to draw textures.
             spriteBatch = new SpriteBatch(GraphicsDevice);
 
+            font = Content.Load<SpriteFont>("Font");
+            font_big = Content.Load<SpriteFont>("font_big");
+
             t_wall = new Texture2D(GraphicsDevice,1,1);
             t_wall.SetData(new Color[] {Color.Black});
 
@@ -70,13 +79,13 @@ namespace MonoPong
 
             Dictionary<Keys, Command> p1Dict = new Dictionary<Keys, Command>();            
             player1 = new Player(Content.Load<Texture2D>(@"png/bar"), new Vector2(0, 0), 1,p1Dict);
-            player1.Position = new Vector2(boundingBoxLeft.Width, boundingBoxTop.Height);
+            player1.Position = new Vector2(boundingBoxLeft.Width, boundingBoxTop.Y + boundingBoxTop.Height);
             p1Dict.Add(Keys.W, new MoveUpCommand(player1));
             p1Dict.Add(Keys.S, new MoveDownCommand(player1));
 
             Dictionary<Keys, Command> p2Dict = new Dictionary<Keys, Command>();        
             player2 = new Player(Content.Load<Texture2D>(@"png/bar"), new Vector2(0, 0), 2, p2Dict);
-            player2.Position = new Vector2(WIDTH-boundingBoxRight.Width-player2.BoundingBox.Width,boundingBoxTop.Height);
+            player2.Position = new Vector2(WIDTH-boundingBoxRight.Width-player2.BoundingBox.Width, boundingBoxTop.Y + boundingBoxTop.Height);
             p2Dict.Add(Keys.Up, new MoveUpCommand(player2));
             p2Dict.Add(Keys.Down, new MoveDownCommand(player2));
            
@@ -100,29 +109,38 @@ namespace MonoPong
         /// <param name="gameTime">Provides a snapshot of timing values.</param>
         protected override void Update(GameTime gameTime)
         {
-            if (GamePad.GetState(PlayerIndex.One).Buttons.Back == ButtonState.Pressed || Keyboard.GetState().IsKeyDown(Keys.Escape))
-                Exit();
+            
             keyState = Keyboard.GetState();
 
-            ball.Position += ball.Velocity * ball.Speed;
-
-            foreach (KeyValuePair<Keys, Command> pair in player1.getKeyDict())
+            if (!_waitingforenter)
             {
-                if(keyState.IsKeyDown(pair.Key))
+                ball.Position += ball.Velocity*ball.Speed;
+
+                foreach (KeyValuePair<Keys, Command> pair in player1.getKeyDict())
                 {
-                    pair.Value.execute();
+                    if (keyState.IsKeyDown(pair.Key))
+                    {
+                        pair.Value.execute();
+                    }
+                }
+
+                foreach (KeyValuePair<Keys, Command> pair in player2.getKeyDict())
+                {
+                    if (keyState.IsKeyDown(pair.Key))
+                    {
+                        pair.Value.execute();
+                    }
+                }
+
+                CheckBallCollision();
+            }
+            else
+            {
+                if (keyState.IsKeyDown(Keys.Enter) || keyState.IsKeyDown(Keys.Space))
+                {
+                    _waitingforenter = false;
                 }
             }
-
-            foreach (KeyValuePair<Keys, Command> pair in player2.getKeyDict())
-            {
-                if (keyState.IsKeyDown(pair.Key))
-                {
-                    pair.Value.execute();
-                }
-            }
-
-            CheckBallCollision();
 
             base.Update(gameTime);
         }
@@ -131,15 +149,12 @@ namespace MonoPong
         {
             if (ball.BoundingBox.Intersects(boundingBoxLeft))
             {
-                player1.Score++;
-                ball.setToStartPosition();
-                ball.Velocity = new Vector2(-1,0);
+                goalShotBy(player2);
+                
             }
             if (ball.BoundingBox.Intersects(boundingBoxRight))
             {
-                player2.Score++;
-                ball.setToStartPosition();
-                ball.Velocity = new Vector2(1, 0);
+                goalShotBy((player1));
             }
 
             if (ball.BoundingBox.Intersects(player1.BoundingBox))
@@ -152,8 +167,6 @@ namespace MonoPong
             if (ball.BoundingBox.Intersects(player2.BoundingBox))
             {
 
-            
-               
                 float relIntersY = (int)((player2.Position.Y + player2.BoundingBox.Height / 2) - (ball.Position.Y + ball.BoundingBox.Height / 2));
                 float normalizedInters = relIntersY / player1.BoundingBox.Height / 2;
                 float bounceangle = (normalizedInters * ((5 * MathHelper.Pi) / 12)); // 75 Grad
@@ -171,6 +184,29 @@ namespace MonoPong
 
         }
 
+        private void goalShotBy(Player player)
+        {
+            player.Score++;           
+            ball.setToStartPosition();
+
+            if (!this.WAITFORENTER == true)
+            {
+                _waitingforenter = true;
+            }
+            
+                if (player.Id == 1)
+                {
+                    ball.Velocity = new Vector2(-1, 0);
+                }
+                else
+                {
+                    ball.Velocity = new Vector2(1, 0);
+                }
+
+            
+            
+        }
+
         /// <summary>
         /// This is called when the game should draw itself.
         /// </summary>
@@ -179,9 +215,18 @@ namespace MonoPong
         {
             GraphicsDevice.Clear(Color.White);
 
-            this.Window.Title = "Score: " + player1.Score + ":" + player2.Score;
 
             spriteBatch.Begin();
+
+            if (_waitingforenter)
+            {
+                if (_pressspacepositonset == false)
+                {
+                    _pressspacepositon = new Vector2(WIDTH/2 - font_big.MeasureString("PRESS SPACE").X/2,
+                        HEIGHT/2 - font_big.MeasureString("PRESS SPACE").Y/2);
+                }
+                spriteBatch.DrawString(font_big, "PRESS SPACE", _pressspacepositon, Color.Black);
+            }
 
             // Draw Walls & Goals
             spriteBatch.Draw(t_wall, boundingBoxTop, boundingBoxTop, Color.White);
@@ -196,7 +241,10 @@ namespace MonoPong
 
             // Draw Ball
             ball.Draw(spriteBatch);
-  
+            
+            // Draw Text
+            string text = "Score: " + player1.Score + ":" + player2.Score;
+            spriteBatch.DrawString(font,text ,new Vector2(WIDTH/2-font.MeasureString(text).X/2,20),Color.Black );
             spriteBatch.End();
             base.Draw(gameTime);
         }
