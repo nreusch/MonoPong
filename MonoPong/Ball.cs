@@ -79,6 +79,12 @@ namespace MonoPong
             }
         }
 
+        public float Startspeed
+        {
+            get { return _startspeed; }
+            set { _startspeed = value; }
+        }
+
         public void Draw(SpriteBatch spriteBatch)
         {
             spriteBatch.Draw(_texture, _position, Color.White);

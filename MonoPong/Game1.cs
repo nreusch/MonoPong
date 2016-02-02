@@ -15,6 +15,7 @@ namespace MonoPong
     /// </summary>
     public class Game1 : Game
     {
+        private const float SPEEDGROWTH = 0.1f;
         public static int WIDTH = 800;
         public static int HEIGHT = 400;
 
@@ -119,12 +120,6 @@ namespace MonoPong
                 
                 ball.Position += ball.Velocity* (float)gameTime.ElapsedGameTime.TotalSeconds;
 
-                // TODO: Change, dirty fix for having the ball jump over the player and goal bounding box
-                if (ball.Position.X < boundingBoxLeft.X) ball.Position = new Vector2(boundingBoxLeft.X + boundingBoxLeft.Width - 1 + player1.BoundingBox.Width, ball.Position.Y);
-                else if (ball.Position.X > boundingBoxRight.X + boundingBoxRight.Width) ball.Position = new Vector2(boundingBoxRight.X - ball.BoundingBox.Width + 1 - player1.BoundingBox.Width, ball.Position.Y);
-
-                if (ball.Position.Y < boundingBoxTop.Y) ball.Position = new Vector2(ball.Position.X, boundingBoxTop.Y + boundingBoxTop.Height-1);
-                else if (ball.Position.Y > boundingBoxBottom.Y + boundingBoxBottom.Height) ball.Position = new Vector2(ball.Position.X, boundingBoxBottom.Y - ball.BoundingBox.Height + 1);
 
                 foreach (KeyValuePair<Keys, Command> pair in player1.getKeyDict())
                 {
@@ -159,25 +154,15 @@ namespace MonoPong
         {
             if (ball.BoundingBox.Intersects(boundingBoxLeft))
             {
-                if (ball.BoundingBox.Intersects(player1.BoundingBox)) // TODO: Change, dirty fix for having the ball jump over the player and goal bounding box
-                {
-                    hitPaddleFrom(player1);
-                }
-                else
-                {
+                
                     goalShotBy(player1);
-                }
+                
             }
             if (ball.BoundingBox.Intersects(boundingBoxRight))
             {
-                if (ball.BoundingBox.Intersects(player2.BoundingBox)) // TODO: Change, dirty fix for having the ball jump over the player and goal bounding box
-                {
-                    hitPaddleFrom(player2);
-                }
-                else
-                {
+
                     goalShotBy(player2);
-                }
+                
             }
 
             if (ball.BoundingBox.Intersects(player1.BoundingBox))
@@ -208,7 +193,13 @@ namespace MonoPong
             float relIntersY = (int)((player.Position.Y + player.BoundingBox.Height / 2) - (ball.Position.Y + ball.BoundingBox.Height / 2));
             float normalizedInters = relIntersY / player.BoundingBox.Height / 2;
             float bounceangle = (normalizedInters * ((5 * MathHelper.Pi) / 12)); // 75 Grad
-            ball.Speed *= 1.2f; // Increase Ball Speed by 20 % TODO: Maybe not exponential growth
+
+            float newspeed = ball.Speed + 0.1f * ball.Startspeed ; // Increase Ball Speed by 20 % TODO: Maybe not exponential growth
+
+            if (newspeed/60 < player1.BoundingBox.Width) // Prevents Ball from Jumping over Player
+            {
+                ball.Speed += SPEEDGROWTH * ball.Startspeed; 
+            }
 
             if (player.Id == 1)
             {
@@ -275,7 +266,7 @@ namespace MonoPong
             
             // Draw Text
             string text = "Score: " + player1.Score + ":" + player2.Score;
-            spriteBatch.DrawString(font,text ,new Vector2(WIDTH/2-font.MeasureString(text).X/2,20),Color.Black );
+            spriteBatch.DrawString(font,text + " " + ball.Velocity,new Vector2(WIDTH/2-font.MeasureString(text).X/2,20),Color.Black );
             spriteBatch.End();
             base.Draw(gameTime);
         }
